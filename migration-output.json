@@ -1,0 +1,22 @@
+[
+  {
+    "pattern": "no-unused-vars",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\test-scope-soup.js",
+    "location": {
+      "line": 1,
+      "column": 10
+    },
+    "details": "'MyCtrl' is defined but never used.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/scope-soup",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\test-scope-soup.js",
+    "location": {
+      "line": 2,
+      "column": 5
+    },
+    "details": "Possible scope soup detected: 4 properties assigned to $scope",
+    "suggestion": "Refactor large controllers: split logic, use isolated scope or migrate to React state/props."
+  }
+]

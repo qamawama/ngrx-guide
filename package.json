@@ -1,11 +1,14 @@
 {
+  "type": "module",
   "name": "ngrx-guide",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "lint:raw": "eslint",
+    "analyze": "eslint -f json --output-file output.json && node src/format-results.js"
   },
   "keywords": [],
   "author": "",
