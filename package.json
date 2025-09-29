@@ -7,8 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
-    "lint:raw": "eslint",
-    "analyze": "eslint -f json --output-file output.json && node src/format-results.js"
+    "lint": "eslint",
+    "analyze": "eslint -c migration.config.mjs . -f json -o output.json && node src/format-results.js"
   },
   "keywords": [],
   "author": "",

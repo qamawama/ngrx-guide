@@ -4,15 +4,16 @@ import fs from "fs";
 const raw = fs.readFileSync("output.json", "utf8");
 const results = JSON.parse(raw);
 
-const formatted = results.flatMap(file => {
-    return file.messages.map(msg => ({
-        pattern: msg.ruleId,
-        file: file.filePath,
-        location: { line: msg.line, column: msg.column },
-        details: msg.message,
-        suggestion: suggestFix(msg.ruleId)
-    }));
-});
+const formatted = results.flatMap(file =>
+    file.messages
+        .filter(msg => msg.ruleId && msg.ruleId.startsWith("custom/"))
+        .map(msg => ({
+            pattern: msg.ruleId,
+            file: file.filePath,
+            details: msg.message,
+            suggestion: suggestFix(msg.ruleId)
+        }))
+);
 
 function suggestFix(ruleId) {
     switch (ruleId) {
