@@ -1,5 +1,3 @@
-import { parse } from 'angular-html-parser';
-
 export default {
     meta: {
         type: "problem",
@@ -10,44 +8,36 @@ export default {
         schema: [],
     },
     create(context) {
-        // Only run this on .html files
-        if (!context.getFilename().endsWith(".html")) {
-            return {};
-        }
+        let bindingCount = 0;
+        let methodRefs = [];
 
         return {
-            Program(node) {
-                const sourceCode = context.getSourceCode().text;
-                const { rootNodes } = parse(sourceCode);
+            // Matches HTML text nodes
+            "HTMLElement > HTMLText"(node) {
+                const value = node.value;
 
-                let bindingCount = 0;
-                let methodRefs = [];
+                if (!value) return;
 
-                function walk(nodes) {
-                    for (const n of nodes) {
-                        // Interpolations like {{ ctrl.something }}
-                        if (n.value && n.value.includes("{{")) {
-                            bindingCount += (n.value.match(/{{/g) || []).length;
-                            const methodMatches = n.value.match(/\b\w+\s*\(/g) || [];
-                            methodRefs.push(...methodMatches);
-                        }
+                // Count bindings {{ ... }}
+                bindingCount += (value.match(/{{/g) || []).length;
 
-                        // Attributes like ng-click="ctrl.doSomething()"
-                        if (n.attrs) {
-                            for (const attr of n.attrs) {
-                                if (attr.value && attr.value.includes("(")) {
-                                    methodRefs.push(attr.value);
-                                }
-                            }
-                        }
+                // Detect direct method calls foo(…)
+                const methodMatches = value.match(/\b\w+\s*\(/g) || [];
+                methodRefs.push(...methodMatches);
+            },
 
-                        if (n.children) walk(n.children);
-                    }
-                }
+            // Matches HTML attributes
+            "HTMLAttribute"(node) {
+                if (!node.value || !node.value.value) return;
 
-                walk(rootNodes);
+                const val = node.value.value;
 
-                // Rule 1: Too many bindings → smells like coupling
+                // Detect method calls in attributes
+                const methodMatches = val.match(/\b\w+\s*\(/g) || [];
+                methodRefs.push(...methodMatches);
+            },
+
+            "Program:exit"(node) {
                 if (bindingCount > 5) {
                     context.report({
                         node,
@@ -55,7 +45,6 @@ export default {
                     });
                 }
 
-                // Rule 2: Direct method calls
                 if (methodRefs.length > 0) {
                     context.report({
                         node,
