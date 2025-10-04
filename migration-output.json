@@ -1,5 +1,53 @@
 [
   {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\angular-seed\\app\\core\\version\\version-directive.spec.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\angular-seed\\app\\core\\version\\version-directive.spec.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\ng-table\\examples-old\\js\\angular-mocks.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\ng-table\\examples-old\\js\\angular-mocks.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\ng-table\\examples-old\\js\\angular-mocks.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\angularjs\\ng-table\\examples-old\\js\\angular.min.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\test-root-scope.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
+    "pattern": "custom/root-scope",
+    "file": "C:\\Users\\User\\ngrx-guide\\samples\\test-root-scope.js",
+    "details": "Avoid using $rootScope. It causes tight coupling and makes migration harder.",
+    "suggestion": "Check migration guide for recommendations."
+  },
+  {
     "pattern": "custom/scope-soup",
     "file": "C:\\Users\\User\\ngrx-guide\\samples\\test-scope-soup.js",
     "details": "Possible scope soup detected: 4 properties assigned to $scope",
