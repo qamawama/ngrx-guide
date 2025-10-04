@@ -1,0 +1,10 @@
+<div ng-controller="LoginCtrl as ctrl">
+    <h1>{{ ctrl.username }}</h1>
+    <p>{{ ctrl.password }}</p>
+    <p>{{ ctrl.status }}</p>
+    <p>{{ ctrl.role }}</p>
+    <p>{{ ctrl.lastLogin }}</p>
+    <p>{{ ctrl.attempts }}</p>
+
+    <button ng-click="ctrl.login()">Login</button>
+</div>
