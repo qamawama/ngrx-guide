@@ -12,32 +12,38 @@ export default {
         let methodRefs = [];
 
         return {
-            // Matches HTML text nodes
-            "HTMLElement > HTMLText"(node) {
-                const value = node.value;
-
+            // Detect text nodes with AngularJS interpolation
+            Text(node) {
+                const value = node.value?.trim();
                 if (!value) return;
 
-                // Count bindings {{ ... }}
-                bindingCount += (value.match(/{{/g) || []).length;
+                // Count AngularJS bindings {{ ... }}
+                const bindings = value.match(/{{/g);
+                if (bindings) bindingCount += bindings.length;
 
-                // Detect direct method calls foo(…)
-                const methodMatches = value.match(/\b\w+\s*\(/g) || [];
-                methodRefs.push(...methodMatches);
+                // Detect method calls like foo()
+                const methods = value.match(/\b\w+\s*\(/g);
+                if (methods) methodRefs.push(...methods);
             },
 
-            // Matches HTML attributes
-            "HTMLAttribute"(node) {
-                if (!node.value || !node.value.value) return;
+            // Detect AngularJS-related attributes
+            Attribute(node) {
+                const attrName = node.key?.value || "";
+                const attrVal = node.value?.value || "";
 
-                const val = node.value.value;
+                // ng-* attributes are bindings
+                if (attrName.startsWith("ng-")) {
+                    bindingCount++;
+                }
 
-                // Detect method calls in attributes
-                const methodMatches = val.match(/\b\w+\s*\(/g) || [];
-                methodRefs.push(...methodMatches);
+                // Detect controller method calls in attributes
+                const methods = attrVal.match(/\b\w+\s*\(/g);
+                if (methods) methodRefs.push(...methods);
             },
 
             "Program:exit"(node) {
+                const file = context.getFilename();
+
                 if (bindingCount > 5) {
                     context.report({
                         node,
