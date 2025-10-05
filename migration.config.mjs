@@ -7,6 +7,7 @@ import rootScope from "./src/rules/root-scope.js";
 import controllerTemplateCoupling from "./src/rules/controller-template-coupling.js";
 import directDom from "./src/rules/direct-dom.js";
 import jqueryUsage from "./src/rules/jquery-usage.js";
+import controllerScopeCoupling from "./src/rules/controller-scope-coupling.js";
 
 export default defineConfig([
     // HTML files
@@ -43,6 +44,7 @@ export default defineConfig([
                     "root-scope": rootScope,
                     "direct-dom": directDom,
                     "jquery-usage": jqueryUsage,
+                    "controller-scope-coupling": controllerScopeCoupling,
                 },
             },
         },
@@ -51,6 +53,7 @@ export default defineConfig([
             "custom/root-scope": "warn",
             "custom/direct-dom": "warn",
             "custom/jquery-usage": "warn",
+            "custom/controller-scope-coupling": "warn",
         },
     },
 ]);
