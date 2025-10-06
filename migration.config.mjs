@@ -1,3 +1,4 @@
+// migration.config.mjs
 import { defineConfig } from "eslint/config";
 import html from "@html-eslint/eslint-plugin";
 import htmlParser from "@html-eslint/parser";
@@ -12,10 +13,8 @@ import controllerScopeCoupling from "./src/rules/controller-scope-coupling.js";
 export default defineConfig([
     // HTML files
     {
-        files: ["samples/**/*.html"],
-        languageOptions: {
-            parser: htmlParser,
-        },
+        files: ["**/*.html"],   // ⚡ match all HTML, filtered by CLI
+        languageOptions: { parser: htmlParser },
         plugins: {
             "@html-eslint": html,
             custom: {
@@ -25,14 +24,14 @@ export default defineConfig([
             },
         },
         rules: {
-            "@html-eslint/indent": "off", // disable if not needed
+            "@html-eslint/indent": "off",
             "custom/controller-template-coupling": "warn",
         },
     },
 
     // JS files
     {
-        files: ["samples/**/*.js"],
+        files: ["**/*.js"],    // ⚡ match all JS, filtered by CLI
         languageOptions: {
             ecmaVersion: "latest",
             sourceType: "module",

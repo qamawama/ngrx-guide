@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "lint": "eslint",
-    "analyze": "eslint -c migration.config.mjs --ext .js,.html samples -f json -o output.json && node src/format-results.js"
+    "analyze": "node --experimental-specifier-resolution=node migration-runner.js"
   },
   "keywords": [],
   "author": "",
