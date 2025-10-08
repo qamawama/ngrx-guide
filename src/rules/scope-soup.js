@@ -18,26 +18,49 @@ export default {
                     node.left.type === "MemberExpression" &&
                     node.left.object.name === "$scope"
                 ) {
-                    scopeAssignments.push(node);
+                    const propertyName = node.left.property.name;
+                    if (propertyName && !propertyName.startsWith("$")) {
+                        scopeAssignments.push(node);
+                    }
                 }
             },
             "Program:exit"() {
-                if (scopeAssignments.length > 3) {
+                const assignmentCount = scopeAssignments.length;
+                if (assignmentCount > 5) {
+                    let severity = 'LOW';
+                    let messagePrefix = 'Moderate';
+
+                    // Define Severity Tiers
+                    if (assignmentCount >= 16) {
+                        severity = 'CRITICAL';
+                        messagePrefix = 'Critical';
+                    } else if (assignmentCount >= 8) {
+                        severity = 'HIGH';
+                        messagePrefix = 'High';
+                    } else {
+                        severity = 'MEDIUM';
+                    }
+
                     context.report({
-                        node: scopeAssignments[0],
-                        message: `Possible scope soup detected: ${scopeAssignments.length} properties assigned to $scope`,
+                        // Report on the first detected assignment for context
+                        node: scopeAssignments[0] || context.getScope().block,
+                        message: `${messagePrefix} scope soup detected: ${assignmentCount} properties assigned to $scope.`,
                         data: {
-                            issue: "scope-soup",
+                            issue: "SCOPE_SOUP",
+                            severity: severity,
                             file: context.getFilename(),
-                            count: scopeAssignments.length,
+                            count: assignmentCount,
                             locations: scopeAssignments.map(a => ({
                                 line: a.loc.start.line,
                                 column: a.loc.start.column
-                            }))
+                            })),
+                            // Show the first 3 or 5 properties for diagnostic context
+                            topProperties: scopeAssignments.slice(0, 5).map(a => a.left.property.name)
                         }
                     });
                 }
-            },
-        };
-    },
+
+            }
+        }
+    }
 };
