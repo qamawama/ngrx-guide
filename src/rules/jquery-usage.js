@@ -1,3 +1,4 @@
+const DOM_METHODS = ['html','text','append','prepend','remove','addClass','removeClass','css','on','off'];
 export default {
     meta: {
         type: "problem",
@@ -14,13 +15,23 @@ export default {
             CallExpression(node) {
                 // Detect $() or jQuery()
                 if (
-                    (node.callee.name === "$" || node.callee.name === "jQuery")
+                    node.callee.type === "MemberExpression" &&
+                    node.callee.object &&
+                    (node.callee.object.name === "$" || node.callee.object.name === "jQuery")
                 ) {
+                    const method = node.callee.property.name;
+                    const severity = DOM_METHODS.includes(method) ? 'CRITICAL_DOM_BLOCKER' : 'MEDIUM_UTILITY';
+
                     context.report({
                         node,
                         message:
-                            "Detected jQuery usage ('{{name}}'). Consider using AngularJS's jqLite or directives instead of direct DOM manipulation.",
-                        data: { name: node.callee.name },
+                            `Detected jQuery method '$.${method}()'. Avoid direct DOM or AJAX handling — prefer AngularJS services (e.g., $http, $element).`,
+                        data: {
+                            method: method,
+                            issue: 'JQUERY_USAGE',
+                            severity: severity,
+                            codeSnippet: context.getSourceCode().getText(node),
+                        },
                         ruleId: "custom/jquery-usage",
                     });
                 }
