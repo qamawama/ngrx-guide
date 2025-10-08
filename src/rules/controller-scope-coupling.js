@@ -2,54 +2,49 @@ export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detects strong coupling between AngularJS controllers and $scope",
+            // Revised description to focus on imperative logic
+            description: "Detects imperative logic and functions defined directly on $scope, which indicate strong controller–scope coupling and hinder component extraction.",
             category: "Best Practices",
         },
         schema: [],
     },
     create(context) {
-        let scopeAssignments = 0;
         let scopeFunctions = 0;
-        const assignedProps = new Set();
-        const definedFuncs = new Set();
+        const definedFunctions = new Set(); // Stores the names of the functions
 
         return {
             AssignmentExpression(node) {
-                // Detect $scope.property = ...
+                // Ensure we are checking $scope.fn = ...
                 if (
                     node.left.type === "MemberExpression" &&
                     node.left.object?.name === "$scope"
                 ) {
-                    scopeAssignments++;
-
-                    const propName = node.left.property?.name || "(unknown)";
-                    assignedProps.add(propName);
-
-                    // Detect $scope.fn = function() { ... }
+                    // Check if the right side is a function definition
                     if (
                         node.right.type === "FunctionExpression" ||
                         node.right.type === "ArrowFunctionExpression"
                     ) {
                         scopeFunctions++;
-                        definedFuncs.add(propName);
+                        const propName = node.left.property?.name || "(unknown)";
+                        definedFunctions.add(propName);
                     }
                 }
             },
 
             "Program:exit"(node) {
-                if (scopeAssignments > 5) {
-                    context.report({
-                        node,
-                        message: `Controller has ${scopeAssignments} $scope bindings → strong controller–scope coupling detected.`,
-                    });
-                }
+                if (scopeFunctions > 0) { // Any assigned function is a smell
+                    // Define a severity based on the number of functions
+                    const severity = scopeFunctions >= 3 ? 'CRITICAL' : 'HIGH';
 
-                if (scopeFunctions > 0) {
                     context.report({
                         node,
-                        message: `Controller defines ${scopeFunctions} $scope functions: ${[
-                            ...definedFuncs,
-                        ].join(", ")}.`,
+                        message: `Controller defines ${scopeFunctions} imperative $scope functions. These must be extracted into services/React hooks.`,
+                        data: {
+                            issue: "CONTROLLER_SCOPE_FUNCTIONS",
+                            severity: severity, // <-- KEY FYP METRIC
+                            functionCount: scopeFunctions,
+                            functions: [...definedFunctions],
+                        }
                     });
                 }
             },
