@@ -2,24 +2,22 @@ export default {
     meta: {
         type: "problem",
         docs: {
-            // Revised description to focus on imperative logic
             description: "Detects imperative logic and functions defined directly on $scope, which indicate strong controller–scope coupling and hinder component extraction.",
-            category: "Best Practices",
         },
-        schema: [],
+        messages: {
+            couplingDetected: "[METRICS:{{metricsJson}}] Controller defines {{functionCount}} imperative $scope functions. These must be extracted into services/React hooks.",
+        }
     },
     create(context) {
         let scopeFunctions = 0;
-        const definedFunctions = new Set(); // Stores the names of the functions
+        const definedFunctions = new Set();
 
         return {
             AssignmentExpression(node) {
-                // Ensure we are checking $scope.fn = ...
                 if (
                     node.left.type === "MemberExpression" &&
                     node.left.object?.name === "$scope"
                 ) {
-                    // Check if the right side is a function definition
                     if (
                         node.right.type === "FunctionExpression" ||
                         node.right.type === "ArrowFunctionExpression"
@@ -32,18 +30,29 @@ export default {
             },
 
             "Program:exit"(node) {
-                if (scopeFunctions > 0) { // Any assigned function is a smell
-                    // Define a severity based on the number of functions
+                if (scopeFunctions > 0) {
                     const severity = scopeFunctions >= 3 ? 'CRITICAL' : 'HIGH';
+
+                    const customMetrics = {
+                        issue: "CONTROLLER_SCOPE_FUNCTIONS",
+                        severity: severity,
+                        functionCount: scopeFunctions,
+                        functions: [...definedFunctions],
+                        file: context.getFilename(),
+                        location: {
+                            line: node.loc.start.line,
+                            column: node.loc.start.column
+                        }
+                    };
+
+                    const metricsJson = JSON.stringify(customMetrics);
 
                     context.report({
                         node,
-                        message: `Controller defines ${scopeFunctions} imperative $scope functions. These must be extracted into services/React hooks.`,
+                        messageId: 'couplingDetected',
                         data: {
-                            issue: "CONTROLLER_SCOPE_FUNCTIONS",
-                            severity: severity, // <-- KEY FYP METRIC
+                            metricsJson: metricsJson,
                             functionCount: scopeFunctions,
-                            functions: [...definedFunctions],
                         }
                     });
                 }
