@@ -2,65 +2,64 @@ export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detects scope soup (too many $scope assignments)",
-            category: "Best Practices",
-            recommended: false
-        },
-        schema: [] // no options yet
+            description: "Detects scope soup (too many $scope assignments)",},
+        messages: {
+            soupDetected: "[METRICS:{{metricsJson}}] {{prefix}} scope soup detected: {{count}} properties assigned to $scope.",
+        }
     },
     create(context) {
-        let scopeAssignments = [];
+        let assignmentCount = 0;
+        const scopeAssignments = [];
+        let severity = 'LOW';
 
         return {
             AssignmentExpression(node) {
-                // detect $scope.property = something
                 if (
                     node.left.type === "MemberExpression" &&
-                    node.left.object.name === "$scope"
+                    node.left.object?.name === "$scope" &&
+                    node.left.property?.name
                 ) {
-                    const propertyName = node.left.property.name;
-                    if (propertyName && !propertyName.startsWith("$")) {
-                        scopeAssignments.push(node);
-                    }
+                    assignmentCount++;
+                    scopeAssignments.push(node);
                 }
             },
-            "Program:exit"() {
-                const assignmentCount = scopeAssignments.length;
-                if (assignmentCount > 5) {
-                    let severity = 'LOW';
-                    let messagePrefix = 'Moderate';
 
-                    // Define Severity Tiers
-                    if (assignmentCount >= 16) {
+            "Program:exit"() {
+                if (assignmentCount > 0) {
+                    if (assignmentCount >= 10) {
                         severity = 'CRITICAL';
-                        messagePrefix = 'Critical';
-                    } else if (assignmentCount >= 8) {
+                    } else if (assignmentCount >= 5) {
                         severity = 'HIGH';
-                        messagePrefix = 'High';
-                    } else {
+                    } else if (assignmentCount >= 3) {
                         severity = 'MEDIUM';
                     }
 
+                    const messagePrefix = severity === 'CRITICAL' ? 'Extreme' : (severity === 'HIGH' ? 'Severe' : (severity === 'MEDIUM' ? 'Moderate' : 'Minor'));
+                    const customMetrics = {
+                        issue: "SCOPE_SOUP",
+                        severity: severity,
+                        count: assignmentCount,
+                        file: context.getFilename(),
+                        locations: scopeAssignments.map(a => ({
+                            line: a.loc.start.line,
+                            column: a.loc.start.column
+                        })),
+                        topProperties: scopeAssignments.slice(0, 5).map(a => a.left.property.name)
+                    };
+
+                    const metricsJson = JSON.stringify(customMetrics);
+
                     context.report({
-                        // Report on the first detected assignment for context
-                        node: scopeAssignments[0] || context.getScope().block,
-                        message: `${messagePrefix} scope soup detected: ${assignmentCount} properties assigned to $scope.`,
+                        node: scopeAssignments[0] || context.getSourceCode().ast,
+                        messageId: 'soupDetected',
                         data: {
-                            issue: "SCOPE_SOUP",
-                            severity: severity,
-                            file: context.getFilename(),
+                            metricsJson: metricsJson,
+                            prefix: messagePrefix,
                             count: assignmentCount,
-                            locations: scopeAssignments.map(a => ({
-                                line: a.loc.start.line,
-                                column: a.loc.start.column
-                            })),
-                            // Show the first 3 or 5 properties for diagnostic context
-                            topProperties: scopeAssignments.slice(0, 5).map(a => a.left.property.name)
                         }
                     });
                 }
-
-            }
-        }
-    }
+            },
+        };
+    },
 };
