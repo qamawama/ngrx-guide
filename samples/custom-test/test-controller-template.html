@@ -1,10 +1,24 @@
-<div ng-controller="LoginCtrl as ctrl">
-    <h1>{{ ctrl.username }}</h1>
-    <p>{{ ctrl.password }}</p>
-    <p>{{ ctrl.status }}</p>
-    <p>{{ ctrl.role }}</p>
-    <p>{{ ctrl.lastLogin }}</p>
-    <p>{{ ctrl.attempts }}</p>
+<div ng-controller="DashboardCtrl as vm">
+    <h2>User Profile: {{ vm.user.name }}</h2>
 
-    <button ng-click="ctrl.login()">Login</button>
+    <p>Email: {{ vm.user.email }}</p>
+    <p>Last Activity: {{ vm.user.lastLogin | date:'medium' }}</p>
+    <p>Role: {{ vm.user.role }}</p>
+    <p>Pending Tasks: {{ vm.tasks.length }}</p>
+    <p>Total Items: {{ vm.inventory.count }}</p>
+    <p>Is Admin: {{ vm.user.isAdmin ? 'Yes' : 'No' }}</p> <hr>
+
+    <div ng-repeat="task in vm.tasks">
+        <p>{{ vm.formatTask(task.name) }} - Priority: {{ task.priority }}</p>
+        <input type="checkbox" ng-model="task.completed" ng-change="vm.updateTask(task.id, task.completed)">
+        <button ng-click="vm.deleteTask(task.id, $event)">Delete</button>
+    </div>
+
+    <hr>
+
+    <p>Theme: {{ vm.settings.theme }}</p>              <p>Sidebar: {{ vm.settings.sidebar.isOpen }}</p>  <p>Version: {{ vm.appVersion | uppercase }}</p>    <form ng-submit="vm.saveSettings()">
+    <input type="text" ng-model="vm.settings.theme">
+    <button type="submit">Save</button>
+</form>
+    <p>Total: {{ vm.inventory.count + vm.tasks.length }}</p>
 </div>
