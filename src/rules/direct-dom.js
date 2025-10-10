@@ -72,7 +72,6 @@ export default {
                         "HIGH",
                         "angular.element"
                     );
-                    return;
                 }
             }
         };
