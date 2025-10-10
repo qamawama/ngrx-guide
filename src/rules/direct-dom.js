@@ -1,58 +1,80 @@
-const GLOBAL_DOM_OBJECTS = ["document", "window"];
+const DOM_OBJECTS = ["document", "window"];
+const NATIVE_DOM_METHODS = [
+    "getElementById",
+    "querySelector",
+    "querySelectorAll",
+    "createElement",
+    "addEventListener",
+    "removeEventListener",
+];
+
 export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detect direct DOM manipulation in AngularJS",
-            category: "Best Practices",
+            description: "Disallow direct DOM manipulation (Native APIs or angular.element)",
         },
-        schema: [],
         messages: {
-            directDom: "Avoid direct DOM manipulation (found '{{method}}'). Use Angular/React bindings instead.",
+            nativeDom: `[METRICS:{{metricsJson}}] Avoid direct DOM manipulation (found '{{method}}'). Use Angular/React bindings instead.`,
+            angularElement: `[METRICS:{{metricsJson}}] Avoid using 'angular.element'. This bypasses component lifecycle and leads to difficult migration.`,
         },
     },
 
     create(context) {
+        function reportIssue(node, issue, severity, method) {
+            const customMetrics = {
+                issue: issue,
+                severity: severity,
+                method: method,
+                file: context.getFilename(),
+                codeSnippet: context.getSourceCode().getText(node),
+            };
+
+            const metricsJson = JSON.stringify(customMetrics);
+
+            const messageId = issue === "NATIVE_DOM_USAGE" ? "nativeDom" : "angularElement";
+
+            context.report({
+                node,
+                messageId: messageId,
+                data: {
+                    metricsJson: metricsJson,
+                    method: method,
+                }
+            });
+        }
+
         return {
             CallExpression(node) {
-                // document.getElementById(...)
-                if (
-                    node.callee.type === "MemberExpression" &&
-                    node.callee.object && GLOBAL_DOM_OBJECTS.includes(node.callee.object.name)
-                ) {
-                    const method = node.callee.property.name;
-                    if (["getElementById", "querySelector", "querySelectorAll", "createElement", "addEventListener", "removeEventListener"].includes(method)) {
-                        context.report({
+                if (node.callee.type !== 'MemberExpression') {
+                    return;
+                }
+
+                const objectName = node.callee.object?.name;
+                const methodName = node.callee.property?.name;
+
+                if (DOM_OBJECTS.includes(objectName)) {
+                    if (methodName && NATIVE_DOM_METHODS.includes(methodName)) {
+                        reportIssue(
                             node,
-                            messageId: "directDom",
-                            data: {
-                                method: `${node.callee.object.name}.${method}`,
-                                issue: "NATIVE_DOM_ACCESS", // New issue name for reporting
-                                severity: "CRITICAL",
-                                codeSnippet: context.getSourceCode().getText(node),
-                                }
-                        });
+                            "NATIVE_DOM_USAGE",
+                            "CRITICAL",
+                            `${objectName}.${methodName}`
+                        );
+                        return;
                     }
                 }
 
-                // angular.element(...)
-                if (
-                    node.callee.type === "MemberExpression" &&
-                    node.callee.object.name === "angular" &&
-                    node.callee.property.name === "element"
-                ) {
-                    context.report({
+                if (objectName === 'angular' && methodName === 'element') {
+                    reportIssue(
                         node,
-                        messageId: "directDom",
-                        data: {
-                            method: "angular.element",
-                            issue: "ANGULAR_ELEMENT_USAGE",
-                            severity: "HIGH",
-                            codeSnippet: context.getSourceCode().getText(node),
-                        }
-                    });
+                        "ANGULAR_ELEMENT_USAGE",
+                        "HIGH",
+                        "angular.element"
+                    );
+                    return;
                 }
-            },
+            }
         };
     },
 };
