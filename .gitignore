@@ -1,5 +1,5 @@
 # ESLint raw output
-output.json
+raw-programmatic-output.json
 migration-output.json
 
 # Node.js dependencies
