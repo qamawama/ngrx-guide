@@ -1,43 +1,43 @@
+const CRITICAL_ATTRS = ["ng-click", "ng-change", "ng-submit", "ng-mouseover"];
+
 export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detects controller–template coupling in AngularJS templates",
-            category: "Best Practices",
+            description: "Detects controller–template coupling (high number of bindings and method calls) in AngularJS templates.",
         },
-        schema: [],
+        messages: {
+            couplingDetected: `[METRICS:{{metricsJson}}] Controller-Template Coupling: {{bindingCount}} bindings & {{methodReferences}} method calls detected.`,
+        }
     },
+
     create(context) {
         let bindingCount = 0;
         let methodRefs = [];
 
         return {
-            // Detect text nodes with AngularJS interpolation
+            /* NOTE: These visitors rely on @html-eslint/parser
+            being configured in ESLint. They will appear unused in a standard IDE setup
+            but are essential for analyzing the template AST.*/
+
             Text(node) {
                 const value = node.value?.trim();
                 if (!value) return;
 
-                // Count AngularJS bindings {{ ... }}
                 const bindings = value.match(/{{/g);
                 if (bindings) bindingCount += bindings.length;
 
-                // Detect method calls like foo()
                 const methods = value.match(/\b\w+\s*\(/g);
                 if (methods) methodRefs.push(...methods);
             },
 
-            // Detect AngularJS-related attributes
             Attribute(node) {
-                const CRITICAL_ATTRS = ["ng-click", "ng-change", "ng-submit", "ng-mouseover"];
                 const attrName = node.key?.value || "";
                 const attrVal = node.value?.value || "";
 
-                // ng-* attributes are bindings
                 if (CRITICAL_ATTRS.includes(attrName)) {
-                    // A method call here is very high severity
                     const methods = attrVal.match(/\b\w+\s*\(/g);
                     if (methods) {
-                        // Give this a higher weight/severity
                         methodRefs.push(...methods.map(m => `(HIGH_SEV_ATTR) ${m.trim()}`));
                     }
                 }
@@ -45,10 +45,10 @@ export default {
 
             "Program:exit"(node) {
                 const file = context.getFilename();
+                const totalCouplingCount = bindingCount + methodRefs.length;
                 let couplingSeverity = 'LOW';
                 let reportNeeded = false;
 
-                // Define Severity based on Binding Count
                 if (bindingCount >= 15) {
                     couplingSeverity = 'CRITICAL';
                     reportNeeded = true;
@@ -60,23 +60,39 @@ export default {
                     reportNeeded = true;
                 }
 
-                // Any method calls are HIGH or CRITICAL
                 if (methodRefs.length > 0) {
-                    couplingSeverity = (couplingSeverity === 'CRITICAL' || methodRefs.some(m => m.includes('HIGH_SEV_ATTR')))
-                        ? 'CRITICAL' : 'HIGH';
+                    const hasHighSevAttr = methodRefs.some(m => m.includes('HIGH_SEV_ATTR'));
+
+                    if (hasHighSevAttr || couplingSeverity === 'CRITICAL') {
+                        couplingSeverity = 'CRITICAL';
+                    } else if (couplingSeverity === 'LOW' || couplingSeverity === 'MEDIUM') {
+                        couplingSeverity = 'HIGH';
+                    }
                     reportNeeded = true;
                 }
 
                 if (reportNeeded) {
+                    const customMetrics = {
+                        issue: "TEMPLATE_COUPLING",
+                        severity: couplingSeverity,
+                        bindingCount: bindingCount,
+                        methodReferences: methodRefs.length,
+                        totalCouplingCount: totalCouplingCount,
+                        file: file,
+                        topMethods: methodRefs
+                            .map(m => m.replace('(HIGH_SEV_ATTR)', '').trim())
+                            .slice(0, 3),
+                    };
+
+                    const metricsJson = JSON.stringify(customMetrics);
+
                     context.report({
                         node,
-                        message: `Controller-Template Coupling: ${bindingCount} bindings & ${methodRefs.length} method calls detected.`,
+                        messageId: 'couplingDetected',
                         data: {
-                            issue: "TEMPLATE_COUPLING",
-                            severity: couplingSeverity,
+                            metricsJson: metricsJson,
                             bindingCount: bindingCount,
                             methodReferences: methodRefs.length,
-                            topMethods: methodRefs.slice(0, 3).map(m => m.trim()),
                         }
                     });
                 }
