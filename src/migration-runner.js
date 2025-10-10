@@ -1,33 +1,38 @@
-// migration-runner.js
-import { spawn } from "child_process";
+import { ESLint } from "eslint";
+import fs from "fs";
+import path from "path";
 
-const target = process.argv[2] || "samples";
-const eslintOutput = "output.json";
-const formattedOutput = "migration-output.json";
+const DEFAULT_TARGET = "samples/custom-test";
+const RAW_OUTPUT_FILE = "raw-programmatic-output.json";
 
-const eslintArgs = [
-    "-c", "migration.config.mjs",
-    "--ext", ".js,.html",
-    `${target}/**/*`,      // ⚡ pass dynamic project path here
-    "-f", "json",
-    "-o", eslintOutput,
-    "--max-warnings=1000"
-];
+const [argTarget = DEFAULT_TARGET] = process.argv.slice(2);
 
-const eslint = spawn("eslint", eslintArgs, { stdio: "inherit", shell: true });
+const projectRoot = process.cwd();
+const configPath = path.resolve(projectRoot, "migration.config.mjs");
+const targetDir = path.resolve(projectRoot, argTarget);
 
-eslint.on("exit", (code) => {
-    console.log("⚙️ ESLint finished with code", code);
+async function runAnalysis() {
+    console.log(`⚙️ Running ESLint programmatically on target: ${targetDir}`);
 
-    // Run formatter anyway
-    const formatter = spawn(
-        "node",
-        ["src/format-results.js", eslintOutput, formattedOutput],
-        { stdio: "inherit", shell: true }
-    );
-
-    formatter.on("exit", (fCode) => {
-        console.log("✅ Formatter finished with code", fCode);
-        process.exit(fCode);
+    const eslint = new ESLint({
+        cwd: projectRoot,
+        overrideConfigFile: configPath,
+        allowInlineConfig: false,
     });
+
+    const results = await eslint.lintFiles([
+        `${targetDir}/**/*.js`,
+        `${targetDir}/**/*.html`
+    ]);
+
+    const output = JSON.stringify(results, null, 2);
+
+    fs.writeFileSync(RAW_OUTPUT_FILE, output);
+    console.log(`✅ Raw output saved to: ${RAW_OUTPUT_FILE}.`);
+    console.log(`📝 Next, run 'format' to generate the final report.`);
+}
+
+runAnalysis().catch((error) => {
+    console.error("ESLint Programmatic Error:", error);
+    process.exit(1);
 });
