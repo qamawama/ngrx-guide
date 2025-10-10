@@ -1,54 +1,63 @@
-const DOM_METHODS = ['html','text','append','prepend','remove','addClass','removeClass','css','on','off'];
+const DOM_METHODS = ['html', 'text', 'append', 'prepend', 'remove', 'addClass', 'removeClass', 'css', 'on', 'off'];
 export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detects jQuery usage which indicates tight coupling or direct DOM manipulation in AngularJS",
-            category: "Best Practices",
-            recommended: false,
+            description: "Detects jQuery usage which indicates tight coupling or direct DOM manipulation in AngularJS",},
+        messages: {
+            jqueryDetected: "[METRICS:{{metricsJson}}] Detected jQuery method '{{fullMethod}}'. Avoid direct DOM or AJAX handling — prefer AngularJS services (e.g., $http, $element).",
         },
-        schema: [],
     },
 
     create(context) {
+        function reportViolation(node, method, fullMethod, severity) {
+            const customMetrics = {
+                method: method,
+                issue: 'JQUERY_USAGE',
+                severity: severity,
+                file: context.getFilename(),
+                codeSnippet: context.getSourceCode().getText(node),
+                location: {
+                    line: node.loc.start.line,
+                    column: node.loc.start.column
+                }
+            };
+
+            const metricsJson = JSON.stringify(customMetrics);
+
+            context.report({
+                node,
+                messageId: "jqueryDetected",
+                data: {
+                    metricsJson: metricsJson,
+                    fullMethod: fullMethod,
+                },
+            });
+        }
+
         return {
             CallExpression(node) {
-                // Detect $() or jQuery()
-                if (
-                    node.callee.type === "MemberExpression" &&
-                    node.callee.object &&
-                    (node.callee.object.name === "$" || node.callee.object.name === "jQuery")
-                ) {
-                    const method = node.callee.property.name;
-                    const severity = DOM_METHODS.includes(method) ? 'CRITICAL_DOM_BLOCKER' : 'MEDIUM_UTILITY';
-
-                    context.report({
-                        node,
-                        message:
-                            `Detected jQuery method '$.${method}()'. Avoid direct DOM or AJAX handling — prefer AngularJS services (e.g., $http, $element).`,
-                        data: {
-                            method: method,
-                            issue: 'JQUERY_USAGE',
-                            severity: severity,
-                            codeSnippet: context.getSourceCode().getText(node),
-                        },
-                        ruleId: "custom/jquery-usage",
-                    });
+                if (node.callee.type === 'MemberExpression' && node.callee.object?.name === '$') {
+                    const method = node.callee.property?.name;
+                    if (method && ['ajax', 'get', 'post', 'ready'].includes(method)) {
+                        reportViolation(node, method, `$.${method}()`, method === 'ajax' ? 'CRITICAL' : 'HIGH');
+                    }
+                    return;
                 }
 
-                // Detect $.something (e.g. $.ajax, $.on)
-                if (
-                    node.callee.type === "MemberExpression" &&
-                    node.callee.object &&
-                    node.callee.object.name === "$"
-                ) {
+                if (node.callee.type === 'MemberExpression' && node.callee.property?.name) {
                     const method = node.callee.property.name;
-                    context.report({
-                        node,
-                        message:
-                            `Detected jQuery method '$.${method}()'. Avoid direct DOM or AJAX handling — prefer AngularJS services (e.g., $http, $element).`,
-                        ruleId: "custom/jquery-usage",
-                    });
+                    if (DOM_METHODS.includes(method)) {
+                        let base = 'jQuery(...)';
+
+                        if (node.callee.object?.type === 'CallExpression' &&
+                            (node.callee.object.callee.name === '$' || node.callee.object.callee.name === 'jQuery')) {
+                            base = node.callee.object.callee.name;
+                        }
+
+                        const fullMethod = `${base}.${method}()`;
+                        reportViolation(node, method, fullMethod, 'HIGH');
+                    }
                 }
             },
         };
