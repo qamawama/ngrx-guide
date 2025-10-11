@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import {migrationGuide} from './migration-guide.js';
 
 const DEFAULT_INPUT_PATH = 'raw-programmatic-output.json';
 const DEFAULT_OUTPUT_PATH = 'migration-output.json';
@@ -23,6 +24,8 @@ function processResults(results) {
 
             const match = rawMessage.match(METRICS_REGEX);
 
+            const suggestion = getSuggestion(message.ruleId, customMetrics);
+
             if (match) {
                 try {
                     customMetrics = JSON.parse(match[1]);
@@ -45,8 +48,7 @@ function processResults(results) {
                 message: cleanMessage,
                 customMetrics: customMetrics,
 
-                line: message.line,
-                column: message.column,
+                suggestion: suggestion,
             });
         });
     });
@@ -73,6 +75,25 @@ function runFormatter() {
         if (error.code === 'ENOENT') {
             console.error(`Check that the file '${inputPath}' exists and has been created by the analysis run.`);
         }
+    }
+}
+
+function getSuggestion(ruleId, customMetrics) {
+    switch (ruleId) {
+        case 'custom/scope-soup':
+            return migrationGuide.scopeSoupUsage();
+        case 'custom/root-scope':
+            return migrationGuide.rootScopeUsage();
+        case 'custom/jquery-usage':
+            return migrationGuide.jqueryUsage();
+        case 'custom/direct-dom':
+            return migrationGuide.directDomManipulation();
+        case 'custom/controller-template-coupling':
+            return migrationGuide.controllerTemplateCoupling();
+        case 'custom/controller-scope-coupling':
+            return migrationGuide.controllerScopeCoupling();
+        default:
+            return null;
     }
 }
 runFormatter();
