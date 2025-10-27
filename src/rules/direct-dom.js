@@ -26,7 +26,6 @@ export default {
                 issue: issue,
                 severity: severity,
                 method: method,
-                file: context.getFilename(),
                 codeSnippet: context.getSourceCode().getText(node),
             };
 

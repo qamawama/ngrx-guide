@@ -78,7 +78,6 @@ export default {
                         bindingCount: bindingCount,
                         methodReferences: methodRefs.length,
                         totalCouplingCount: totalCouplingCount,
-                        file: file,
                         topMethods: methodRefs
                             .map(m => m.replace('(HIGH_SEV_ATTR)', '').trim())
                             .slice(0, 3),

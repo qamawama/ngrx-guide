@@ -38,7 +38,6 @@ export default {
                         severity: severity,
                         functionCount: scopeFunctions,
                         functions: [...definedFunctions],
-                        file: context.getFilename(),
                         location: {
                             line: node.loc.start.line,
                             column: node.loc.start.column

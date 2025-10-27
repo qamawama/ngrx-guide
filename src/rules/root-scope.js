@@ -18,7 +18,6 @@ export default {
                         issue: "ROOT_SCOPE_USAGE",
                         severity: "CRITICAL",
                         usageType: usageType,
-                        file: context.getFilename(),
                         codeSnippet: context.getSourceCode().getText(node.parent),
                         location: {
                             line: node.loc.start.line,

@@ -15,7 +15,6 @@ export default {
                 method: method,
                 issue: 'JQUERY_USAGE',
                 severity: severity,
-                file: context.getFilename(),
                 codeSnippet: context.getSourceCode().getText(node),
                 location: {
                     line: node.loc.start.line,

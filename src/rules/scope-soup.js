@@ -39,7 +39,6 @@ export default {
                         issue: "SCOPE_SOUP",
                         severity: severity,
                         count: assignmentCount,
-                        file: context.getFilename(),
                         locations: scopeAssignments.map(a => ({
                             line: a.loc.start.line,
                             column: a.loc.start.column
