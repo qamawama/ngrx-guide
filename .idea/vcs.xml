@@ -5,6 +5,7 @@
     <mapping directory="$PROJECT_DIR$/samples/angularjs/angular-phonecat" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/samples/angularjs/angular-seed" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/samples/angularjs/helpdesk-client" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/samples/angularjs/material" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/samples/angularjs/ng-table" vcs="Git" />
   </component>
 </project>
