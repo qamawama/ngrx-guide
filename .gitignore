@@ -13,3 +13,7 @@ yarn-error.log*
 # OS / IDE
 .DS_Store
 .idea/
+
+# big test files
+samples/angularjs/material/
+samples/angularjs/blur-admin/
