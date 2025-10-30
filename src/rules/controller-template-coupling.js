@@ -1,4 +1,9 @@
-const CRITICAL_ATTRS = ["ng-click", "ng-change", "ng-submit", "ng-mouseover"];
+import {getMigrationAdvice} from "../migration-guide.js";
+
+const ANGULAR_ATTRS = [
+    "ng-click", "ng-change", "ng-submit", "ng-mouseover", "ng-model",
+    "ng-disabled", "ng-show", "ng-hide", "ng-if", "ng-repeat"
+];
 
 export default {
     meta: {
@@ -12,7 +17,10 @@ export default {
     },
 
     create(context) {
-        let bindingCount = 0;
+        let occurrences = {
+            mustacheBinding: [],
+            propertyBinding: [],
+        };
         let methodRefs = [];
 
         return {
@@ -24,63 +32,102 @@ export default {
                 const value = node.value?.trim();
                 if (!value) return;
 
-                const bindings = value.match(/{{/g);
-                if (bindings) bindingCount += bindings.length;
+                // Count complete {{ }} expressions and track them
+                const bindings = value.match(/{{\s*[^}]+?\s*}}/g);
+                if (bindings) {
+                    bindings.forEach(binding => {
+                        occurrences.mustacheBinding.push({
+                            expression: binding,
+                            line: node.loc.start.line,
+                            column: node.loc.start.column,
+                            codeSnippet: value
+                        });
+                    });
+                }
 
-                const methods = value.match(/\b\w+\s*\(/g);
-                if (methods) methodRefs.push(...methods);
+                // Detect method calls in {{ }}
+                const methodsInBindings = value.match(/{{\s*[^}]*\b\w+\s*\([^}]*}}/g);
+                if (methodsInBindings) {
+                    methodsInBindings.forEach(method => {
+                        const cleanMethod = method.match(/\b\w+\s*\(/)[0];
+                        methodRefs.push(`(Binding) ${cleanMethod.trim()}`);
+                    });
+                }
             },
 
             Attribute(node) {
                 const attrName = node.key?.value || "";
                 const attrVal = node.value?.value || "";
 
-                if (CRITICAL_ATTRS.includes(attrName)) {
-                    const methods = attrVal.match(/\b\w+\s*\(/g);
+                if (!attrVal) return;
+
+                const isAngularAttr = attrName.startsWith('ng-') ||
+                    attrName.startsWith('ng:') ||
+                    attrName.startsWith('md-') ||
+                    attrName.startsWith('data-ng-') ||
+                    ANGULAR_ATTRS.some(attr => attrName.includes(attr));
+
+                if (isAngularAttr) {
+                    const propertyRefs = attrVal.match(/\b(ctrl|vm|scope)\.\w+/g);
+                    if (propertyRefs) {
+                        propertyRefs.forEach(property => {
+                            occurrences.propertyBinding.push({
+                                expression: property,
+                                attribute: attrName,
+                                line: node.loc.start.line,
+                                column: node.loc.start.column,
+                                codeSnippet: `${attrName}="${attrVal}"`
+                            });
+                        });
+                    }
+
+                    const methods = attrVal.match(/\b\w+\s*\([^)]*\)/g);
                     if (methods) {
-                        methodRefs.push(...methods.map(m => `(HIGH_SEV_ATTR) ${m.trim()}`));
+                        methodRefs.push(...methods.map(m => `(Attribute:${attrName}) ${m.trim()}`));
                     }
                 }
             },
 
             "Program:exit"(node) {
-                const file = context.getFilename();
-                const totalCouplingCount = bindingCount + methodRefs.length;
+                const uniqueMethodRefs = [...new Set(methodRefs)];
+                const mustacheBindCount = occurrences.mustacheBinding.length;
+                const propertyBindCount = occurrences.propertyBinding.length;
+                const bindingCount = mustacheBindCount + propertyBindCount;
+
+                const totalCouplingCount = bindingCount + uniqueMethodRefs.length;
                 let couplingSeverity = 'LOW';
                 let reportNeeded = false;
 
-                if (bindingCount >= 15) {
+                if (totalCouplingCount >= 15) {
                     couplingSeverity = 'CRITICAL';
                     reportNeeded = true;
-                } else if (bindingCount >= 8) {
+                } else if (totalCouplingCount >= 8) {
                     couplingSeverity = 'HIGH';
                     reportNeeded = true;
-                } else if (bindingCount > 5) {
+                } else if (totalCouplingCount >= 5) {
                     couplingSeverity = 'MEDIUM';
-                    reportNeeded = true;
-                }
-
-                if (methodRefs.length > 0) {
-                    const hasHighSevAttr = methodRefs.some(m => m.includes('HIGH_SEV_ATTR'));
-
-                    if (hasHighSevAttr || couplingSeverity === 'CRITICAL') {
-                        couplingSeverity = 'CRITICAL';
-                    } else if (couplingSeverity === 'LOW' || couplingSeverity === 'MEDIUM') {
-                        couplingSeverity = 'HIGH';
-                    }
                     reportNeeded = true;
                 }
 
                 if (reportNeeded) {
                     const customMetrics = {
-                        issue: "TEMPLATE_COUPLING",
+                        issue: "Controller-template coupling",
                         severity: couplingSeverity,
-                        bindingCount: bindingCount,
-                        methodReferences: methodRefs.length,
                         totalCouplingCount: totalCouplingCount,
-                        topMethods: methodRefs
-                            .map(m => m.replace('(HIGH_SEV_ATTR)', '').trim())
-                            .slice(0, 3),
+                        countByCategory: {
+                            bindingCount: bindingCount,
+                            methodReferencesCount: uniqueMethodRefs.length,
+                        },
+                        location: {
+                            mustacheBinding: occurrences.mustacheBinding,
+                            propertyBinding: occurrences.propertyBinding,
+                        },
+                        allMethodsRefs: uniqueMethodRefs,
+                        migrationGuide: getMigrationAdvice("controllerTemplateCoupling", {
+                            bindingCount: bindingCount,
+                            methodReferencesCount: uniqueMethodRefs.length,
+                            totalCouplingCount: totalCouplingCount,
+                        }),
                     };
 
                     const metricsJson = JSON.stringify(customMetrics);
@@ -91,7 +138,7 @@ export default {
                         data: {
                             metricsJson: metricsJson,
                             bindingCount: bindingCount,
-                            methodReferences: methodRefs.length,
+                            methodReferences: uniqueMethodRefs.length,
                         }
                     });
                 }
