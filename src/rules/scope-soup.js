@@ -1,10 +1,12 @@
+import {getMigrationAdvice} from "../migration-guide.js";
+
 export default {
     meta: {
         type: "problem",
         docs: {
             description: "Detects scope soup (too many $scope assignments)",},
         messages: {
-            soupDetected: "[METRICS:{{metricsJson}}] {{prefix}} scope soup detected: {{count}} properties assigned to $scope.",
+            soupDetected: "[METRICS:{{metricsJson}}] {{prefix}} scope soup detected: {{totalOccurrences}} properties assigned to $scope.",
         }
     },
     create(context) {
@@ -36,14 +38,18 @@ export default {
 
                     const messagePrefix = severity === 'CRITICAL' ? 'Extreme' : (severity === 'HIGH' ? 'Severe' : (severity === 'MEDIUM' ? 'Moderate' : 'Minor'));
                     const customMetrics = {
-                        issue: "SCOPE_SOUP",
+                        issue: "Scope soup",
                         severity: severity,
-                        count: assignmentCount,
+                        totalOccurrences: assignmentCount,
                         locations: scopeAssignments.map(a => ({
+                            scopeAssignment: a.left.property.name,
                             line: a.loc.start.line,
                             column: a.loc.start.column
                         })),
-                        topProperties: scopeAssignments.slice(0, 5).map(a => a.left.property.name)
+                        migrationGuide: getMigrationAdvice("scopeSoupUsage", {
+                            totalOccurrences: assignmentCount,
+                            scopeAssignments: scopeAssignments,
+                        })
                     };
 
                     const metricsJson = JSON.stringify(customMetrics);
@@ -54,7 +60,7 @@ export default {
                         data: {
                             metricsJson: metricsJson,
                             prefix: messagePrefix,
-                            count: assignmentCount,
+                            totalOccurrences: assignmentCount,
                         }
                     });
                 }
