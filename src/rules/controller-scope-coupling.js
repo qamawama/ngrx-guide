@@ -1,3 +1,5 @@
+import {getMigrationAdvice} from "../migration-guide.js";
+
 export default {
     meta: {
         type: "problem",
@@ -9,8 +11,9 @@ export default {
         }
     },
     create(context) {
-        let scopeFunctions = 0;
-        const definedFunctions = new Set();
+        let scopeFunctionsCount = 0;
+        let scopeFunctions = [];
+        const uniqueFunctions = new Set();
 
         return {
             AssignmentExpression(node) {
@@ -22,26 +25,36 @@ export default {
                         node.right.type === "FunctionExpression" ||
                         node.right.type === "ArrowFunctionExpression"
                     ) {
-                        scopeFunctions++;
+                        scopeFunctionsCount++;
                         const propName = node.left.property?.name || "(unknown)";
-                        definedFunctions.add(propName);
+                        scopeFunctions.push({
+                            scopeFunction: propName,
+                            line: node.loc.start.line,
+                            column: node.loc.start.column,
+                            node: node
+                        });
+                        uniqueFunctions.add(propName);
                     }
                 }
             },
 
             "Program:exit"(node) {
-                if (scopeFunctions > 0) {
-                    const severity = scopeFunctions >= 3 ? 'CRITICAL' : 'HIGH';
+                if (scopeFunctionsCount > 0) {
+                    const severity = scopeFunctionsCount >= 3 ? 'CRITICAL' : 'HIGH'; // Fixed: use scopeFunctionsCount
 
                     const customMetrics = {
-                        issue: "CONTROLLER_SCOPE_FUNCTIONS",
+                        issue: "Controller-scope coupling",
                         severity: severity,
-                        functionCount: scopeFunctions,
-                        functions: [...definedFunctions],
-                        location: {
-                            line: node.loc.start.line,
-                            column: node.loc.start.column
-                        }
+                        totalOccurrences: scopeFunctionsCount,
+                        locations: scopeFunctions.map(occ => ({
+                            function: occ.scopeFunction,
+                            line: occ.line,
+                            column: occ.column
+                        })),
+                        migrationAdvice: getMigrationAdvice("controllerScopeCoupling", {
+                            totalOccurrences: scopeFunctionsCount,
+                            uniqueFunctions: [...uniqueFunctions],
+                        }),
                     };
 
                     const metricsJson = JSON.stringify(customMetrics);
@@ -51,7 +64,7 @@ export default {
                         messageId: 'couplingDetected',
                         data: {
                             metricsJson: metricsJson,
-                            functionCount: scopeFunctions,
+                            functionCount: scopeFunctionsCount,
                         }
                     });
                 }
