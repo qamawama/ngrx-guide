@@ -5,81 +5,125 @@
  */
 
 export const migrationGuide = {
-    scopeSoupUsage: () => ({
-        refactor: [
-            "Enforce 'controllerAs' to eliminate implicit $scope references.",
-            "Relocate data manipulation and logic into AngularJS services.",
-            "Restrict controller responsibility to view-model exposure only."
-        ],
-        migration: [
-            "Replace $scope with component-local state using Hooks.",
-            "Centralize shared state with Context or state management libraries.",
-            "Transfer reusable logic into custom hooks or isolated utility modules."
-        ]
-    }),
+    scopeSoupUsage: (metrics) => {
+        const functionCount = metrics.totalOccurrences || 0;
+        const scopeAssignment = metrics.scopeAssignment || [];
 
-    rootScopeUsage: () => ({
-        refactor: [
-            "Remove event broadcasting via $rootScope.",
-            "Establish dedicated state services instead of global event reliance.",
-            "Confine cross-component communication to service contracts."
-        ],
-        migration: [
-            "Substitute $rootScope with Context-based global state.",
-            "Convert broadcast patterns to explicit prop or store flows.",
-            "Avoid implicit global dependencies in component hierarchy."
-        ]
-    }),
+        return {
+            refactor: [
+                `Replace ${functionCount} $scope function${functionCount > 1 ? 's' : ''} with 'controllerAs' syntax`,
+                "Move business logic from $scope to AngularJS services",
+                scopeAssignment.length > 0 ? `Extract functions: ${scopeAssignment.slice(0, 3).join(', ')}${scopeAssignment.length > 3 ? '...' : ''}` : "Identify and extract $scope functions"
+            ],
+            migration: [
+                `Convert ${functionCount} $scope function${functionCount > 1 ? 's' : ''} to React hooks`,
+                "Replace $scope with useState/useReducer for local state",
+                "Move shared logic to custom hooks or context"
+            ]
+        }
+    },
 
-    controllerTemplateCoupling: () => ({
-        refactor: [
-            "Eliminate function calls and logic expressions from templates.",
-            "Define computed values within the controller layer.",
-            "Ensure templates access only resolved controller state."
-        ],
-        migration: [
-            "Shift all view logic into component body or memoized selectors.",
-            "Maintain JSX purity with declarative state rendering only.",
-            "Isolate complex logic into hooks or helper modules."
-        ]
-    }),
+    rootScopeUsage: (metrics) => {
+        const totalOccurrences = metrics.totalOccurrences || 0;
+        const breakdown = metrics.breakdown || {};
 
-    controllerScopeCoupling: () => ({
-        refactor: [
-            "Remove $watch and event listeners from controllers.",
-            "Delegate reactive logic to services or lifecycle abstractions.",
-            "Contain side-effects within structured callback mechanisms."
-        ],
-        migration: [
-            "Transform $watch to useEffect-driven state observation.",
-            "Embed lifecycle transitions within component execution context.",
-            "Extract side-effects into encapsulated hooks."
-        ]
-    }),
+        return {
+            refactor: [
+                `Remove ${totalOccurrences} $rootScope reference${totalOccurrences > 1 ? 's' : ''}`,
+                breakdown.assignment ? `Replace ${breakdown.assignment} assignment${breakdown.assignment > 1 ? 's' : ''} with services` : "Replace $rootScope assignments",
+                "Use AngularJS events or services for cross-component communication"
+            ],
+            migration: [
+                `Migrate ${totalOccurrences} $rootScope usage${totalOccurrences > 1 ? 's' : ''} to React Context`,
+                "Convert global state to Redux/Zustand or Context API",
+                "Replace $rootScope events with prop drilling or event emitters"
+            ]
+        }
+    },
 
-    directDomManipulation: () => ({
-        refactor: [
-            "Prohibit DOM access from controllers and services.",
-            "Encapsulate element interaction within directive boundaries.",
-            "Replace manual mutation with binding-based rendering."
-        ],
-        migration: [
-            "Employ useRef only for integration boundaries.",
-            "Delegate DOM updates to state-driven rendering.",
-            "Restrict imperative access to controlled escape hatches."
-        ]
-    }),
+    controllerTemplateCoupling: (metrics) => {
+        const bindingCount = metrics.bindingCount || 0;
+        const methodCount = metrics.methodReferencesCount || 0;
+        const total = metrics.totalCouplingCount || 0;
 
-    jqueryUsage: () => ({
-        refactor: [
-            "Eliminate jQuery dependencies from component logic.",
-            "Substitute DOM manipulation with directive-backed bindings.",
-            "Replace AJAX calls with AngularJS $http or service wrappers."
-        ],
-        migration: [
-            "Adopt fetch or axios within React-side data hooks.",
-            "Bind UI state through component props and internal state.",
-            "Remove imperative patterns in favor of declarative rendering."
-        ]
-    }),
+        return {
+            refactor: [
+                `Reduce ${total} coupling point${total > 1 ? 's' : ''} (${bindingCount} bindings, ${methodCount} methods)`,
+                "Move method calls from template to controller",
+                "Use one-way data flow and avoid template logic"
+            ],
+            migration: [
+                `Convert ${bindingCount} binding${bindingCount > 1 ? 's' : ''} and ${methodCount} method call${methodCount > 1 ? 's' : ''} to React props/state`,
+                "Replace template logic with component logic and hooks",
+                "Define explicit component interfaces"
+            ]
+        }
+    },
+
+    controllerScopeCoupling: (metrics) => {
+        const functionCount = metrics.totalOccurrences || 0;
+        const uniqueFunctions = metrics.uniqueFunctions || [];
+
+        return {
+            refactor: [
+                `Extract ${functionCount} $scope function${functionCount > 1 ? 's' : ''} from controller`,
+                uniqueFunctions.length > 0 ? `Move functions to services: ${uniqueFunctions.slice(0, 3).join(', ')}${uniqueFunctions.length > 3 ? '...' : ''}` : "Identify $scope functions",
+                "Use controllerAs syntax to eliminate $scope dependency"
+            ],
+            migration: [
+                `Convert ${functionCount} $scope function${functionCount > 1 ? 's' : ''} to React component methods/hooks`,
+                "Replace $scope with component state management",
+                "Extract reusable logic to custom hooks"
+            ]
+        }
+    },
+
+    directDomManipulation: (metrics) => {
+        const totalOccurrences = metrics.totalOccurrences || 0;
+        const nativeCount = metrics.nativeDomCount || 0;
+        const angularElementCount = metrics.angularElementCount || 0;
+
+        return {
+            refactor: [
+                `Remove ${totalOccurrences} direct DOM manipulation${totalOccurrences > 1 ? 's' : ''}`,
+                nativeCount > 0 ? `Replace ${nativeCount} native DOM call${nativeCount > 1 ? 's' : ''} with directives` : "",
+                angularElementCount > 0 ? `Convert ${angularElementCount} angular.element call${angularElementCount > 1 ? 's' : ''} to bindings` : ""
+            ],
+            migration: [
+                `Replace ${totalOccurrences} DOM manipulation${totalOccurrences > 1 ? 's' : ''} with React state`,
+                "Use useRef only for integration with third-party libraries",
+                "Convert imperative DOM updates to declarative rendering"
+            ]
+        }
+    },
+
+    jqueryUsage: (metrics) => {
+        const totalOccurrences = metrics.totalOccurrences || 0;
+        const domCount = metrics.domCount || 0;
+        const ajaxCount = metrics.ajaxCount || 0;
+
+        return {
+            refactor: [
+                `Eliminate ${totalOccurrences} jQuery usage${totalOccurrences > 1 ? 's' : ''}`,
+                domCount > 0 ? `Replace ${domCount} DOM manipulation${domCount > 1 ? 's' : ''} with Angular directives` : "",
+                ajaxCount > 0 ? `Convert ${ajaxCount} AJAX call${ajaxCount > 1 ? 's' : ''} to $http service` : ""
+            ],
+            migration: [
+                `Remove ${totalOccurrences} jQuery dependency${totalOccurrences > 1 ? 's' : ''}`,
+                "Replace jQuery DOM manipulation with React state/props",
+                "Convert jQuery AJAX to fetch/axios in useEffect hooks"
+            ]
+        }
+    },
 };
+
+export function getMigrationAdvice(ruleId, metrics) {
+    const guide = migrationGuide[ruleId];
+    if (guide) {
+        return guide(metrics);
+    }
+    return {
+        refactor: ["General refactoring needed"],
+        migration: ["General migration approach required"]
+    };
+}
