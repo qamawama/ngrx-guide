@@ -24,8 +24,6 @@ function processResults(results) {
 
             const match = rawMessage.match(METRICS_REGEX);
 
-            const suggestion = getSuggestion(message.ruleId, customMetrics);
-
             if (match) {
                 try {
                     customMetrics = JSON.parse(match[1]);
@@ -42,13 +40,9 @@ function processResults(results) {
                 filePath: fileResult.filePath,
                 ruleId: message.ruleId,
 
-                severity: customMetrics.severity || 'UNKNOWN',
-                issue: customMetrics.issue || 'UNKNOWN',
-
                 message: cleanMessage,
                 customMetrics: customMetrics,
 
-                suggestion: suggestion,
             });
         });
     });
@@ -78,22 +72,4 @@ function runFormatter() {
     }
 }
 
-function getSuggestion(ruleId, customMetrics) {
-    switch (ruleId) {
-        case 'custom/scope-soup':
-            return migrationGuide.scopeSoupUsage();
-        case 'custom/root-scope':
-            return migrationGuide.rootScopeUsage();
-        case 'custom/jquery-usage':
-            return migrationGuide.jqueryUsage();
-        case 'custom/direct-dom':
-            return migrationGuide.directDomManipulation();
-        case 'custom/controller-template-coupling':
-            return migrationGuide.controllerTemplateCoupling();
-        case 'custom/controller-scope-coupling':
-            return migrationGuide.controllerScopeCoupling();
-        default:
-            return null;
-    }
-}
 runFormatter();
