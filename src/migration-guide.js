@@ -6,21 +6,21 @@
 
 export const migrationGuide = {
     scopeSoupUsage: (metrics) => {
-        const functionCount = metrics.totalOccurrences || 0;
-        const scopeAssignment = metrics.scopeAssignment || [];
+        const dataCount = metrics.dataAssignments || 0;
+        const functionCount = metrics.functionAssignments || 0;
 
         return {
             refactor: [
-                `Replace ${functionCount} $scope function${functionCount > 1 ? 's' : ''} with 'controllerAs' syntax`,
-                "Move business logic from $scope to AngularJS services",
-                scopeAssignment.length > 0 ? `Extract functions: ${scopeAssignment.slice(0, 3).join(', ')}${scopeAssignment.length > 3 ? '...' : ''}` : "Identify and extract $scope functions"
+                `Extract ${dataCount} data propert${dataCount !== 1 ? 'ies' : 'y'} and ${functionCount} function${functionCount !== 1 ? 's' : ''} from $scope`,
+                `Move ${functionCount} function${functionCount !== 1 ? 's' : ''} to AngularJS services`,
+                "Use controllerAs syntax with 'vm' pattern"
             ],
             migration: [
-                `Convert ${functionCount} $scope function${functionCount > 1 ? 's' : ''} to React hooks`,
-                "Replace $scope with useState/useReducer for local state",
-                "Move shared logic to custom hooks or context"
+                `Convert ${dataCount} data propert${dataCount !== 1 ? 'ies' : 'y'} to React useState/useReducer`,
+                `Transform ${functionCount} $scope function${functionCount !== 1 ? 's' : ''} to custom hooks`,
+                "Replace $scope with component state management"
             ]
-        }
+        };
     },
 
     rootScopeUsage: (metrics) => {
@@ -56,24 +56,6 @@ export const migrationGuide = {
                 `Convert ${bindingCount} binding${bindingCount > 1 ? 's' : ''} and ${methodCount} method call${methodCount > 1 ? 's' : ''} to React props/state`,
                 "Replace template logic with component logic and hooks",
                 "Define explicit component interfaces"
-            ]
-        }
-    },
-
-    controllerScopeCoupling: (metrics) => {
-        const functionCount = metrics.totalOccurrences || 0;
-        const uniqueFunctions = metrics.uniqueFunctions || [];
-
-        return {
-            refactor: [
-                `Extract ${functionCount} $scope function${functionCount > 1 ? 's' : ''} from controller`,
-                uniqueFunctions.length > 0 ? `Move functions to services: ${uniqueFunctions.slice(0, 3).join(', ')}${uniqueFunctions.length > 3 ? '...' : ''}` : "Identify $scope functions",
-                "Use controllerAs syntax to eliminate $scope dependency"
-            ],
-            migration: [
-                `Convert ${functionCount} $scope function${functionCount > 1 ? 's' : ''} to React component methods/hooks`,
-                "Replace $scope with component state management",
-                "Extract reusable logic to custom hooks"
             ]
         }
     },

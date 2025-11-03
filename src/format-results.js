@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import {migrationGuide} from './migration-guide.js';
 
 const DEFAULT_INPUT_PATH = 'raw-programmatic-output.json';
 const DEFAULT_OUTPUT_PATH = 'migration-output.json';

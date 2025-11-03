@@ -4,15 +4,18 @@ export default {
     meta: {
         type: "problem",
         docs: {
-            description: "Detects scope soup (too many $scope assignments)",},
+            description: "Detects scope soup (data and function assignments to $scope)",
+        },
         messages: {
-            soupDetected: "[METRICS:{{metricsJson}}] {{prefix}} scope soup detected: {{totalOccurrences}} properties assigned to $scope.",
+            soupDetected: "[METRICS:{{metricsJson}}] {{severityText}} scope soup detected: {{totalOccurrences}} assignments to $scope ({{dataCount}} data, {{functionCount}} functions).",
         }
     },
     create(context) {
-        let assignmentCount = 0;
-        const scopeAssignments = [];
-        let severity = 'LOW';
+        let totalAssignments = 0;
+        let dataAssignments = [];
+        let functionAssignments = [];
+        const uniqueProperties = new Set();
+        const uniqueFunctions = new Set();
 
         return {
             AssignmentExpression(node) {
@@ -21,46 +24,88 @@ export default {
                     node.left.object?.name === "$scope" &&
                     node.left.property?.name
                 ) {
-                    assignmentCount++;
-                    scopeAssignments.push(node);
+                    totalAssignments++;
+                    const propName = node.left.property.name;
+                    uniqueProperties.add(propName);
+
+                    // Check if it's a function assignment
+                    const isFunction =
+                        node.right.type === "FunctionExpression" ||
+                        node.right.type === "ArrowFunctionExpression";
+
+                    const assignmentInfo = {
+                        property: propName,
+                        line: node.loc.start.line,
+                        column: node.loc.start.column,
+                        isFunction: isFunction,
+                        node: node
+                    };
+
+                    if (isFunction) {
+                        functionAssignments.push(assignmentInfo);
+                        uniqueFunctions.add(propName);
+                    } else {
+                        dataAssignments.push(assignmentInfo);
+                    }
                 }
             },
 
-            "Program:exit"() {
-                if (assignmentCount > 0) {
-                    if (assignmentCount >= 10) {
+            "Program:exit"(node) {
+                if (totalAssignments > 0) {
+                    let severity = 'LOW';
+                    if (totalAssignments >= 10) {
                         severity = 'CRITICAL';
-                    } else if (assignmentCount >= 5) {
+                    } else if (totalAssignments >= 5) {
                         severity = 'HIGH';
-                    } else if (assignmentCount >= 3) {
+                    } else if (totalAssignments >= 3) {
                         severity = 'MEDIUM';
                     }
 
-                    const messagePrefix = severity === 'CRITICAL' ? 'Extreme' : (severity === 'HIGH' ? 'Severe' : (severity === 'MEDIUM' ? 'Moderate' : 'Minor'));
+                    const severityText =
+                        severity === 'CRITICAL' ? 'Extreme' :
+                            severity === 'HIGH' ? 'Severe' :
+                                severity === 'MEDIUM' ? 'Moderate' : 'Minor';
+
                     const customMetrics = {
-                        issue: "Scope soup",
+                        issue: "SCOPE_SOUP",
                         severity: severity,
-                        totalOccurrences: assignmentCount,
-                        locations: scopeAssignments.map(a => ({
-                            scopeAssignment: a.left.property.name,
-                            line: a.loc.start.line,
-                            column: a.loc.start.column
-                        })),
-                        migrationGuide: getMigrationAdvice("scopeSoupUsage", {
-                            totalOccurrences: assignmentCount,
-                            scopeAssignments: scopeAssignments,
+                        totalOccurrences: totalAssignments,
+                        dataAssignments: dataAssignments.length,
+                        functionAssignments: functionAssignments.length,
+                        uniqueProperties: [...uniqueProperties],
+                        uniqueFunctions: [...uniqueFunctions],
+                        assignments: {
+                            data: dataAssignments.map(a => ({
+                                property: a.property,
+                                line: a.line,
+                                column: a.column
+                            })),
+                            functions: functionAssignments.map(a => ({
+                                function: a.property,
+                                line: a.line,
+                                column: a.column
+                            }))
+                        },
+                        migrationAdvice: getMigrationAdvice("scopeSoupUsage", {
+                            totalOccurrences: totalAssignments,
+                            dataAssignments: dataAssignments.length,
+                            functionAssignments: functionAssignments.length,
+                            uniqueProperties: [...uniqueProperties],
+                            uniqueFunctions: [...uniqueFunctions]
                         })
                     };
 
                     const metricsJson = JSON.stringify(customMetrics);
 
                     context.report({
-                        node: scopeAssignments[0] || context.getSourceCode().ast,
+                        node: dataAssignments[0]?.node || functionAssignments[0]?.node || node,
                         messageId: 'soupDetected',
                         data: {
                             metricsJson: metricsJson,
-                            prefix: messagePrefix,
-                            totalOccurrences: assignmentCount,
+                            severityText: severityText,
+                            totalOccurrences: totalAssignments,
+                            dataCount: dataAssignments.length,
+                            functionCount: functionAssignments.length
                         }
                     });
                 }
